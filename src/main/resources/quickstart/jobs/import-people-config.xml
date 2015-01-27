@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd">
+
+	<bean id="reader" class="org.springframework.batch.item.file.FlatFileItemReader">
+		<property name="resource" value="classpath:/sample-data.csv" />
+		<property name="lineMapper">
+			<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+				<property name="lineTokenizer">
+					<bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="names" value="firstName, lastName" />
+					</bean>
+				</property>
+				<property name="fieldSetMapper">
+					<bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper">
+						<property name="targetType" value="quickstart.Person" />
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="processor" class="quickstart.PersonItemProcessor" />
+
+	<bean id="writer" class="org.springframework.batch.item.database.JdbcBatchItemWriter">
+		<property name="itemSqlParameterSourceProvider">
+			<bean class="org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider" />
+		</property>
+		<property name="sql" value="INSERT INTO people (first_name, last_name) VALUES (:firstName, :lastName)" />
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<bean id="runIdIncrementer" class="org.springframework.batch.core.launch.support.RunIdIncrementer" />
+
+	<batch:job id="importPeopleJob" incrementer="runIdIncrementer" >
+		<batch:step id="step1">
+			<batch:tasklet>
+				<batch:chunk reader="reader" processor="processor" writer="writer" commit-interval="10" />
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+</beans>
